@@ -7,7 +7,7 @@ void ft_print_tab(char **tab)
 	i = 0;
 	while (tab && tab[i])
 	{
-		printf("%s\n", tab[i]);
+		dprintf(2, "%s\n", tab[i]);
 		i++;
 	}
 }
@@ -45,7 +45,7 @@ void ft_print_maillon(t_maillons	*maillons)
 			printf("  maillons -> commande = %s\n", maillons -> command);
 		printf("  maillons ->args\n  {\n    ");
 		if (maillons -> args)
-			ft_print_split_elem(maillons -> args);
+			ft_print_tab(maillons -> args);
 		printf("  }\n");
 		printf("  maillons -> outputs\n  {\n");
 		if (maillons -> output)
@@ -67,17 +67,39 @@ void ft_print_maillons(t_maillons	*maillons)
 				printf("  maillons -> commande = %s\n", maillons -> command);
 			printf("  maillons ->args\n  {\n    ");
 			if (maillons -> args)
-				ft_print_split_elem(maillons -> args);
+				ft_print_tab(maillons -> args);
 			printf("  }\n");
 			printf("  maillons -> outputs\n  {\n");
 			if (maillons -> output)
 				ft_print_input_output(maillons ->output);
+			printf("heredoc = %d\n", maillons-> heredoc);
 			printf("  }\n}\n\n");
 			maillons = maillons -> next;
 		}
 	}
 	else 
 		printf("(null)\n");
+}
+
+
+void ft_print_garbage(t_garbage	*garbage)
+{
+	dprintf(2, "char** split_pipe\n");
+	if (garbage->split_pipe && garbage->split_pipe[0])
+		ft_print_tab(garbage -> split_pipe);
+	dprintf(2,"\n");
+	dprintf(2,"split_elem\n");
+	if (garbage->split_lst)
+		ft_print_split_elem(garbage -> split_lst);
+	dprintf(2,"\n");
+	dprintf(2,"maillons dans garbage\n");
+	if (garbage->maillons)
+		ft_print_maillons(garbage -> maillons);
+	dprintf(2,"\n");
+	dprintf(2,"pipes \n");
+	if (garbage->pipes && garbage->pipes->pipe[0] && garbage->pipes->pipe[1])
+		dprintf(2,"pipe[0] = %d // pipes[1] =%d \n", garbage->pipes->pipe[0] , garbage->pipes->pipe[1]);
+	dprintf(2,"\n");
 }
 
 

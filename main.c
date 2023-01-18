@@ -46,39 +46,75 @@ int main(int argc, char **argv, char **env)
 */
 
 
+t_maillons *loop_create_maillons(char * line, t_garbage *garbage)
+{
+	t_maillons		*maillons;
+	t_maillons		*maillon;
+	t_maillons		*prev; 
+	int				i;
+
+	i = 0;
+	prev = NULL;
+	garbage->split_pipe = ft_split(line , "|");
+	garbage ->maillons = NULL;
+	if (!(garbage->split_pipe))
+		return (0);
+	while (garbage && garbage->split_pipe[i])
+	{
+		garbage->split_lst = ft_split_list(garbage->split_pipe[i], WHITE_SPACE);
+		if (!(garbage->split_lst))
+				break;
+		create_split_arg(&garbage-> split_lst);
+		maillon = create_maillons(&garbage->split_lst, prev);
+		add_end_maillons(&garbage->maillons, maillon);
+		prev = maillon;
+		ft_free_split_arg(&garbage->split_lst);
+		i++;
+	}
+	ft_free_tab(garbage->split_pipe);
+	garbage->split_lst = NULL;
+	garbage->split_pipe = NULL;
+	return (garbage->maillons);
+}
+
+
 int main(int argc, char **argv, char **env)
 {
 	char			*line;
-	char			**split_pipe;
-	t_split_elem	*split_arg;
-	t_maillons		*maillons; // utile pour toi zak faire le parsing dessus
-	t_maillons		*maillon; 
-	t_maillons		*prev;
-	int				i;
+	t_garbage	garbage;
 	char **new_env;
 	
-	prev = NULL;
-	maillon = NULL;
 	setup_signal_handlers();
+	initialize_garbage(&garbage);
 	//new_env = my_env(env);//ne pas oublier de free a la fin le new env
 	//while (1)
 	//{
-		i = 0;
 		line = rl_gets();
 		if (line == NULL)  // si l'utilisateur appuie sur ctrl-D
 		{
+			ft_free_tab(new_env);
 			printf("\n");
 			exit(0);
 		}
 		if (parse(line) == 0)
 		{
-			//line = "cat >a | cat | >a";
-			if (!quote_close(line))
-			{
-				dprintf(2, "Quote non fermer\n");
-				exit (0);
-			}
-			split_pipe = ft_split(line , "|"); // gerer le cas ou les pipes se trouve dans des parenthese
+			loop_create_maillons(line, &garbage);
+			cmd_to_path(garbage.maillons, env);
+			find_all_heredoc(garbage.maillons);// verifier les leak au niveau de cat << a <b
+			check_inputs_outputs(garbage.maillons);
+			//ft_print_garbage(&garbage);
+			//ft_print_maillons(garbage.maillons);
+			pipex(garbage.maillons, env, &garbage);
+			//free_maillons(&maillons);
+		}
+	//}
+	//ft_free_tab(new_env);
+	return (1);
+}
+
+/*
+
+split_pipe = ft_split(line , "|");
 			maillons = NULL;
 			if (!split_pipe)
 				return (0);
@@ -87,7 +123,6 @@ int main(int argc, char **argv, char **env)
 				split_arg = ft_split_list(split_pipe[i], WHITE_SPACE);
 				if (!split_arg)
 					break;
-				//ft_print_split_elem(split_arg);
 				create_split_arg(&split_arg);
 				maillon = create_maillons(&split_arg, prev);
 				add_end_maillons(&maillons, maillon);
@@ -95,18 +130,12 @@ int main(int argc, char **argv, char **env)
 				ft_free_split_arg(&split_arg);
 				i++;
 			}
-			check_input_output(&(maillons->output));
-			pipex(maillons, env);
-			ft_print_maillons(maillons);
-			//find_maillon_without_cmd(&maillons);
-			//ft_print_maillons(maillons);
-			//printf("\n\nLen = %d\n\n", ft_strlen_maillons(maillons));
-			free_maillons(&maillons);
-			ft_free_tab(split_pipe);
-		}
-	//}
-	return (1);
-}
+
+
+
+*/
+
+
 
 // cat > A > B < sadsadas < 48787 > C
 
@@ -141,3 +170,68 @@ int main(int argc, char **argv, char **env)
 
 // asas<"SAs<>SA<><A S><"asas
 // > in >> in2 cat -e < out <out2 << out3 -l
+
+/*
+t_maillons *loop_create_maillons(char * line)
+{
+	t_maillons		*maillons;
+	t_maillons		*maillon;
+	t_maillons		*prev; 
+	char			**split_pipe;
+	t_split_elem	*split_arg;
+	int				i;
+
+	i = 0;
+	prev = NULL;
+	split_pipe = ft_split(line , "|");
+	maillons = NULL;
+	if (!split_pipe)
+		return (0);
+	while (split_pipe[i])
+	{
+		split_arg = ft_split_list(split_pipe[i], WHITE_SPACE);
+		if (!split_arg)
+				break;
+		create_split_arg(&split_arg);
+		maillon = create_maillons(&split_arg, prev);
+		add_end_maillons(&maillons, maillon);
+		prev = maillon;
+		ft_free_split_arg(&split_arg);
+		i++;
+	}
+	ft_free_tab(split_pipe);
+	return (maillons);
+}
+
+
+int main(int argc, char **argv, char **env)
+{
+	char			*line;
+	t_maillons		*maillons;
+	char **new_env;
+	
+	setup_signal_handlers();
+	//new_env = my_env(env);//ne pas oublier de free a la fin le new env
+	//while (1)
+	//{
+		line = rl_gets();
+		if (line == NULL)  // si l'utilisateur appuie sur ctrl-D
+		{
+			ft_free_tab(new_env);
+			printf("\n");
+			exit(0);
+		}
+		if (parse(line) == 0)
+		{
+			maillons = loop_create_maillons(line);
+			ft_print_maillons(maillons);
+			cmd_to_path(maillons, env);
+			find_all_heredoc(maillons);
+			check_inputs_outputs(maillons);
+			pipex(maillons, env);
+			free_maillons(&maillons);
+		}
+	//}
+	//ft_free_tab(new_env);
+	return (1);
+}*/

@@ -1,135 +1,135 @@
 #include "minishell.h"
 
-int	dup_fd(int new_stdin, int new_stdout)
+int	switch_dup2_fd_in(t_maillons *maillons, t_pipes *pipes, int i, int len)
 {
-	if (dup2(new_stdin, STDIN_FILENO) == -1
-		|| dup2(new_stdout, STDOUT_FILENO) == -1)
-		return (0);
-	return (1);
-}
+	int	res;
 
-void	create_pipe(int *pipes, int i)
-{
-	int	pipe_fd[2];
-
-	if (pipe(pipe_fd) == -1)
+	res = -2;
+	if (find_if_have_output(maillons -> output, "<") == 1)
 	{
-		perror("pipe");
-		exit (1);
+		//dprintf(2, "Lecture %d est %s \n", i, find_name_sep(maillons -> output, "<"));
+		res = open(find_name_sep(maillons -> output, "<"),  O_RDWR, O_DSYNC, !O_DIRECTORY);
+		dup2(res, STDIN_FILENO);
 	}
-	pipes[i] = pipe_fd[0];
-	pipes[i + 1] = pipe_fd[1];
-}
-
-int	*create_pipes(int len)
-{
-	int	*pipes;
-	int	i;
-
-	i = 0;
-	pipes = malloc(sizeof(int *) * (len * 2));
-	while (i < len * 2)
-	{
-		create_pipe(pipes, i);
-		if (!pipes[i] || !pipes[i + 1])
-			return (NULL);
-		i = i + 2;
-	}
-	i = 0;
-	return (pipes);
-}
-
-int find_stdin(t_maillons *maillons)
-{
-	int	fd;
-
-    if (find_if_have_output(maillons, '<'))
+	else if (find_if_have_output(maillons -> output, "<<") == 1)
     {
-		fd = open(find_name_sep(maillons, '<'),  O_RDWR, O_DSYNC, !O_DIRECTORY);
-		return (fd);
+		//dprintf(2, "Lecture %d  est heredoc %s\n", i ,find_name_sep(maillons -> output, "<<"));
+		if (maillons -> heredoc != -1)
+			dup2(maillons -> heredoc, STDIN_FILENO);
 	}
 	else if (!(maillons-> prev))
 	{
-		printf("stdin trouver\n");
-		return (STDIN_FILENO);
+		//dprintf(2, "Lecture %d  est  dev/stdin\n", i);
+		//res = open("/dev/stdin",  O_RDWR, O_DSYNC, !O_DIRECTORY);
+		//dup2(res, STDIN_FILENO);
+		return (1);
 	}
-	else if (find_if_have_output(maillons -> prev, '>') || !(maillons->prev->command))
+	else if (find_if_have_output(maillons -> prev -> output , ">") || !(maillons->prev->command))
 	{
-		fd = open("/dev/null",  O_RDWR, O_DSYNC, !O_DIRECTORY);
-		return (fd);
+		//dprintf(2, "Lecture %d  est  dev/null\n", i);
+		res = open("/dev/null",  O_RDWR, O_DSYNC, !O_DIRECTORY);
+		dup2(res, STDIN_FILENO);
 	}
 	else
 	{
-		// return pipes[0] du maillons d'avant
+		//dprintf(2, "Lecture %d  est  pipe[%d]\n", i,(i*2 -2));
+		dup2(pipes->pipe[i * 2 - 2], STDIN_FILENO);
 	}
-	return (-1);
+	if (res != -2)
+	{
+		//dprintf(2, "free entrer / i = %d\n", i);
+		close(res);
+	}
+	return (1);
 }
 
-int find_stdout(t_maillons *maillons)
+int	switch_dup2_fd_out(t_maillons *maillons, t_pipes *pipes, int i, int len)
 {
-	int	fd;
+	int res;
 
-    if (find_if_have_output(maillons, '>'))
+	res = -2;
+	if (find_if_have_output(maillons -> output, ">"))
     {
-		fd = open(find_name_sep(maillons, '>'),  O_RDWR, O_DSYNC, !O_DIRECTORY);
-		return (fd);
+		//dprintf(2, "Ecriture %d est  %s \n", i, find_name_sep(maillons -> output, ">"));
+		res = open(find_name_sep(maillons -> output, ">"), O_WRONLY | O_CREAT | O_TRUNC, 0644, !O_DIRECTORY);
+		dup2(res, STDOUT_FILENO);
+	}
+	else if (find_if_have_output(maillons -> output, ">>"))
+	{
+		//dprintf(2, "Ecriture %d est %s \n", i, find_name_sep(maillons -> output, ">>"));
+		res = open(find_name_sep(maillons -> output, ">>"),  O_WRONLY | O_CREAT | O_APPEND, 0644, !O_DIRECTORY);
+		dup2(res, STDOUT_FILENO);
 	}
 	else if (!(maillons-> next))
 	{
-		printf("stdout trouver\n");
-		return (STDOUT_FILENO);
+		//dprintf(2, "Ecriture %d est dev/stdout \n" , i);
+		//dprintf(2, "Commande %s : \n", maillons->command);
+		//res = open("/dev/stdout ",  O_RDWR, O_DSYNC, !O_DIRECTORY);
+		//dprintf(2, "res = %d/ i = %d\n", res , i);
+		//dup2(res , STDOUT_FILENO);
+		return (1);
 	}
 	else
 	{
-		// return pipes[1] du maillons d'avant
+		//dprintf(2, "Ecriture %d est pipes[%d] \n", i, (i*2 +1));
+		dup2(pipes->pipe[i * 2 + 1], STDOUT_FILENO);
 	}
-	return (-1);
+	if (res != -2)
+	{
+		//dprintf(2, "free sortie / i = %d\n", i);
+		close(res);
+	}
+	return (1);
 }
 
 
-int pipex_one(t_maillons  *maillons, char **env)
+int	pipex_multiple(t_maillons	*maillons, char **env, int len)
 {
-    pid_t	pid;
-	char *a[2];
-	int fd_in;
-	int	fd_out;
+	t_pipes pipes;
+	pid_t pid;
+	int i;
 
-	fd_in = -1; 
-	a[0] = ft_strdup("cat");
-	a[1] = 0;
-    pid = fork();
-    if (pid == -1)
+	pipes = create_all_pipes(len - 1);
+	//dprintf(2, "pipe[0] = %d  pipe[1] = %d\n", pipes.pipe[0], pipes.pipe[1]);
+	//dprintf(2, "pipe[2] = %d  pipe[3] = %d\n", pipes.pipe[2], pipes.pipe[3]);
+	i = 0;
+	while (maillons)
+	{
+		pid = fork();
+		if (pid == -1)
 			return (perror("fork"), 1);
-	if (pid == 0)
-	{
-			
-		dup_fd(find_stdin(maillons, &fd_in), find_stdout(maillons, &fd_out));
-		if (execve("/usr/bin/cat", a , env) == -1)
+		if (pid == 0)
 		{
-			perror("execve");
-			exit (1);
+			switch_dup2_fd_in(maillons, &pipes, i, len);
+			switch_dup2_fd_out(maillons, &pipes, i, len);
+			free_all_pipes((len-1) * 2, pipes);
+			if (maillons->heredoc !=-1)
+				close(maillons->heredoc);
+			if (execve(maillons ->command, maillons -> args , env) == -1)
+			{
+				perror("execve");
+				exit (1);
+			}
 		}
-		return (1);
+		if (i > 0 && pipes.pipe[i * 2 - 2])
+		{
+			//dprintf(2, "tour %d close pipe[%d]\n", i, i * 2 - 2);
+			close(pipes.pipe[i * 2 - 2]);
+		}
+		if (i != (len -1) && pipes.pipe[i * 2 + 1])
+		{
+			//dprintf(2, "tour %d close pipe[%d]\n", i, i * 2 +1);
+			close(pipes.pipe[i * 2 + 1]);
+		}
+		i++;
+		maillons = maillons -> next;
 	}
-	waitpid(-1 , NULL, 0);
-	free(a[0]);
-	return(0);
-}
-
-
-
-int pipex(t_maillons *maillons, char **env)
-{
-    int *pipes;
-    int len;
-
-    len = ft_strlen_maillons(maillons); // nombre de maillons
-    if (len == 1)
+	i = 0;
+	while (i < len)
 	{
-        pipex_one(maillons, env);
+		waitpid(-1, NULL, 0);
+		i++;
 	}
-    //pipes = create_pipes(len); // crer (len -1) pipe
-    return (0);
-
-
+	free(pipes.pipe);
+	return (1);
 }

@@ -140,12 +140,14 @@ void    free_maillon(t_maillons *lst)
         ft_print_input_output(lst->output);
         printf("free cmd = %s\n", lst ->command);*/
         if (lst -> args)
-            ft_free_split_arg(&lst -> args);
+            ft_free_tab(lst -> args);
         if (lst -> command)
             free(lst -> command);
         if (lst -> output)
             free_inputs_outputs(&lst->output);
         free(lst);
+        //if (lst -> heredoc != -1)
+       //     close(lst->heredoc);
     }
     
 }

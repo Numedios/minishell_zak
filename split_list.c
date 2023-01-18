@@ -32,5 +32,6 @@ t_split_elem	*ft_split_list(char *str, char *sep)
 			str++;
 		}
 	}
+	//ft_print_split_elem(lst);
 	return (lst);
 }

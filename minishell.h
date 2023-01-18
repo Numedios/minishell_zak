@@ -12,8 +12,15 @@
 #include <signal.h>
 # include <readline/readline.h>
 # include <readline/history.h>
+#include <limits.h>
 
 # define WHITE_SPACE "\t\n\v\f\r "
+
+typedef struct s_pipes
+{
+	int	*pipe;
+    int len;
+}	t_pipes;
 
 typedef struct  split_elem
 {
@@ -32,22 +39,45 @@ typedef struct input_output
 
 typedef struct  maillons
 {
+    int heredoc;
     struct input_output  *output;
     char        *command;
-    struct split_elem        *args;
+    char        **args;
     struct maillons  *next;
-     struct maillons  *prev;
+    struct maillons  *prev;
 }       t_maillons;
 
 typedef struct garbage
 {
-    char    **split;
-    struct split_elem    *split__lst;
-    struct input_output  *output;
+    char    **split_pipe;
+    struct split_elem    *split_lst;
     struct maillons     *maillons;
+    struct s_pipes  *pipes;
 }       t_garbage;
 
+typedef struct index
+{
+    int         j;
+   	int         a;
+}       t_index;
+
+typedef struct two_pipe
+{
+	int		fd_in;
+	int		fd_out;
+	int		pipe_fd[2];
+	int		i;
+	int		status;
+}       two_pipe;
+
 # define BUFFER_SIZE 5
+
+/*      pipe_of_zak     */
+int pipex_2(t_maillons  *maillons, char **env);
+int find_stdin_2(t_maillons *maillons, int * fd_in, two_pipe *two_pipe);
+int find_stdout_2(t_maillons *maillons, int *fd_out, two_pipe *two_pipe);
+void	init(two_pipe *two_pipe);
+int	dup_fd(int new_stdin, int new_stdout);
 
 /* main.c */
 
@@ -59,7 +89,7 @@ int do_cd(char *path);
 int do_echo(char *string, int i);
 void    do_env(char **env);
 char **	my_env(char **env);
-int do_exit(int statut);
+int do_exit(char *statut);
 char	*ft_strchr(const char *s, int c);
 int check_if_tab_exist (char *tab, char **env);
 char **do_export(char *tab, char **env_copy);
@@ -73,7 +103,11 @@ int str_cmp(char *s1, char *s2);
 int parse (char *line);
 int quote_close_2(char *str);
 int ft_strlen_const(const char *str);
-
+char	*ft_strjoin(char const *s1, char const *s2);
+int	skip_quote (char *line, int i);
+int print_tab(char **tab);
+int str_len_env(char *str);
+int replace_dollar(char *tab, char **new_env);
 
 /* libft.c */
 
@@ -104,7 +138,7 @@ char	*find_output(char **tab);
 /* find_command.c */
 
 char    *find_command(t_split_elem *lst);
-t_split_elem    *find_argument(t_split_elem *lst);
+char    **find_argument(t_split_elem *lst);
 
 /* find_input_output.c */
 
@@ -141,7 +175,7 @@ void    add_end_input_output(t_input_output **list, t_input_output *add);
 
 int ft_strlen_maillons(t_maillons *lst);
 
-/* create_split_argc */
+/* clean_split_argc */
 
 int	just_quote(char *str);
 int	chek_sep_str(char *str, char *sep);
@@ -152,6 +186,8 @@ void	create_split_arg(t_split_elem **lst);
 
 /* clear_maillons.c */
 
+char    *find_name_sep(t_input_output *lst, char *sep);
+int find_if_have_output(t_input_output *lst, char *sep);
 void    find_maillon_without_cmd(t_maillons **maillons);
 
 /* create_maillons.c */
@@ -170,28 +206,60 @@ void	change_quote(char *str);
 int check_output(t_input_output *output);
 int check_input(t_input_output *output);
 int check_input_output(t_input_output **input_output);
+int check_inputs_outputs(t_maillons *maillons);
 
 /* bultins_echo.c */
 
 int check_option_n(char *str, int *space);
 void echo(char **arg);
 
-/* bultins_echo.c */
-
 void    cd(char **arg);
+
+/* pipex.c */
+
+int pipex(t_maillons *maillons, char **env, t_garbage *garbage);
+
+
+/* pipex2.c */
+
+int	pipex_multiple(t_maillons	*maillons, char **env, int len);
+
+/* utils_pipex.c */
+
+void	free_all_pipes(int argc, t_pipes pipes);
+void	create_pipe(int *pipes, int i);
+int	*create_pipes(int len);
+t_pipes	create_all_pipes(int len);
+
+/*split_pipex.c */
+
+char	**split_pipex(char *path, char sep);
+int	ft_strcmp_pipex(char *str, char *search);
+
+/* cmd_to_path.c */
+
+int cmd_to_path(t_maillons *maillons, char **env);
+
+/* create_heredoc.c*/
+
+void    create_heredoc(int *pipe_fd);
+int heredoc(char *stop);
+void find_all_heredoc(t_maillons *maillons);
 
 /* builtins_pwd.c */
 
 void    pwd();
 
-/* clear_maillons.c */
+/* get_next_line */
 
-char    *find_name_sep(t_maillons *lst, char sep);
-int find_if_have_output(t_maillons *lst, char sep);
+int		check_end(char *line);
+char	*ft_strjoin_gnl(char *line, char *buf);
+void	get_line(char *line, char *buffer);
+char	*get_next_line(int fd);
 
-/* pipex.c */
+/*utils_parsing.c */
 
-int pipex(t_maillons *maillons, char **env);
+char	*ft_strjoin_pipex(char *path, char *add);
 
 /* garbage_collector.c  */
 
@@ -205,5 +273,6 @@ void	ft_print_split_elem(t_split_elem *list);
 void	ft_print_input_output(t_input_output *list);
 void ft_print_maillons(t_maillons	*maillons);
 char	*create_word_and_quote2(char *str, char *sep);
+void ft_print_garbage(t_garbage	*garbage);
 
 #endif

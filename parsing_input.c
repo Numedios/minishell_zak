@@ -44,8 +44,6 @@ int check_input(t_input_output *output)
 }
 
 
-
-
 int check_input_output(t_input_output **input_output)
 {
     t_input_output *input;
@@ -58,13 +56,9 @@ int check_input_output(t_input_output **input_output)
     while (*input_output)
     {
         if (ft_strcmp((*input_output)->operator, ">") || ft_strcmp((*input_output)->operator, ">>"))
-        {
-            //printf("here output \n");
+        {       
             if (output)
-            {
-                //printf("supp output\n");
                 free_input_output_middle(&output, &first);
-            }
             output = (*input_output);
             if  (check_output(output) == -1)
             {
@@ -77,12 +71,8 @@ int check_input_output(t_input_output **input_output)
         }
         else if (ft_strcmp((*input_output)->operator, "<") || ft_strcmp((*input_output)->operator, "<<"))
         {
-           // printf("here input \n");
             if (input)
-            {
-                //printf("supp input\n");
                 free_input_output_middle(&input, &first);
-            }
             input = (*input_output);
              if  (check_input(input) == -1)
             {
@@ -97,5 +87,15 @@ int check_input_output(t_input_output **input_output)
         *input_output = (*input_output) -> next;
     }
     *input_output = first;
+    return (1);
+}
+
+int check_inputs_outputs(t_maillons *maillons)
+{
+    while (maillons)
+    {
+        check_input_output(&(maillons) -> output);
+        maillons = (maillons)->next;
+    }
     return (1);
 }

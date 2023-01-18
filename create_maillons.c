@@ -7,7 +7,8 @@ t_maillons  *create_maillons(t_split_elem **split, t_maillons *prev)
     new = malloc(sizeof(*new));
     new -> command = find_command(*split);
     new -> args = find_argument(*split);
-    new -> output = find_input_output(*split); 
+    new -> output = find_input_output(*split);
+    new -> heredoc = -1;
     new -> next = NULL;
     new -> prev = prev;
     

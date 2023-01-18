@@ -1,6 +1,7 @@
 #include "minishell.h"
 
 //possibilite de creer sa propre env
+//comparer toutes les lignes pour savoir laquelle imprimer en premier
 void    do_env(char **env)
 {
     int i;
@@ -28,7 +29,7 @@ char **	my_env(char **env)
 		return (NULL);
 	while(env[i])
 		i++;
-	env_copy = malloc ((i + 1) * sizeof(char*));
+	env_copy = malloc (sizeof(char *) * (i +1));
 	if (env_copy == NULL)
 		return (NULL);
 	i = 0;

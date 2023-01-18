@@ -17,7 +17,6 @@ SRC = main.c \
 		split_list.c \
 		list_split_elem.c \
 		list_input_output.c \
-		list_maillons.c \
 		builtin_echo.c \
 		builtin_cd.c  \
 		builtin_pwd.c \
@@ -28,11 +27,26 @@ SRC = main.c \
 		parsing.c  \
 		utils_zak.c  \
 		garbage_collector.c \
+		signals.c\
+		replace_dollar.c\
 		clear_maillons.c \
+		list_maillons.c \
 		parsing_input.c \
-		pipex.c
+		pipex.c \
+		pipex2.c \
+		utils_pipex.c \
+		split_pipex.c \
+		cmd_to_path.c \
+		utils_parsing.c \
+		create_heredoc.c \
+		get_next_line.c \
+		get_next_line_utils.c
+	
+PIPEX_SRC = pipe_of_zak/pipe_de_2.c \
+				pipe_of_zak/security.c  \
+				pipe_of_zak/utils_pipex.c \
 
-OBJ = $(SRC:.c=.o)
+OBJ = $(SRC:.c=.o) $(PIPEX_SRC:.c=.o)
 
 all : $(NAME)
 
@@ -43,6 +57,8 @@ $(NAME) : $(OBJ)
 
 %.o : $(SRCPATH)%.c
 	@$(CC) $(CFLAGS) -c $^ 
+%.o : $(SRCPATH)pipe_of_zak/%.c
+	@$(CC) $(CFLAGS) -c $^
 
 bonus : all
 
